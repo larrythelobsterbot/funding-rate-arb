@@ -5,7 +5,6 @@ from pubsub import pub
 from GlobalUtils.globalUtils import EventsDirectory
 
 (sio, app) = create_app()
-
 # Setup topics for the application
 setup_topics()
 

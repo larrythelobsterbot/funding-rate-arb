@@ -142,7 +142,7 @@ def set_bot_settings_route():
         return jsonify({"error": str(error)}), 500
 
 
-@settings_blueprint.route('/restart-bot', methods=['POST'])
+@settings_blueprint.route('/restart-bot', methods=['POST']) # TODO: Think about preventing collision when  restarting bot and bot thread is running
 def restart_bot():
     try:
         if sys.platform.startswith('win'):

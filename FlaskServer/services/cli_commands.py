@@ -3,16 +3,18 @@ import pubsub.pub
 from Main.main_class import Main
 from Main.main_class_demo import Demo
 from TxExecution.Master.MasterPositionController import MasterPositionController
-import threading
+from threading import Lock, Thread
 import json
 import pubsub
 from GlobalUtils.logger import *
+import signal, sys
 api_routes = Blueprint('api_routes', __name__)
 
 # Bot Related variables
 bot_instance = Main()
 bot_thread = None
 is_running = False
+bot_lock = Lock()
 
 # Demo Related variables
 demo_instance: Demo = Demo()
@@ -21,24 +23,26 @@ demo_instance: Demo = Demo()
 @api_routes.route('/run', methods=['POST'])
 def run():
     global bot_instance, bot_thread, is_running
-    try:
-        if not bot_instance.bot_running:
-            if bot_thread:
-                if bot_thread.is_alive():
-                    print("Bot thread is still alive!")
-                    return jsonify({"status": "Bot thread is still alive!"}), 403
-            else:
-                bot_thread = threading.Thread(target=bot_instance.start_search)
+    with bot_lock:
+        try:
+            if not is_running:
+                if bot_thread:
+                    if bot_thread.is_alive():
+                        print("Bot thread is still alive!")
+                        return jsonify({"status": "Bot thread is still alive!"}), 403
+                # No Bot thread or it is not alive
+                bot_thread = Thread(target=bot_instance.start_search)
                 bot_thread.start()
                 is_running = True
                 logger.info(f"FlaskServer - Bot started")
                 return jsonify({"status": "Bot started"}), 200
-        else:
-            print("Bot already running!")
-            return jsonify({"status": "Bot already running"}), 403
-    except Exception as e:
-        logger.error(f"FlaskServer - Threading problem: {e}")
-        return jsonify({"status": str(e)}), 500
+            else:
+                print("Bot already running!")
+                return jsonify({"status": "Bot already running"}), 403
+        except Exception as e:
+            logger.error(f"FlaskServer - Threading problem: {e}")
+            return jsonify({"status": str(e)}), 500
+        
 @api_routes.route('/stop', methods=['POST'])
 def stop():
     global bot_instance, bot_thread, is_running
@@ -114,7 +118,7 @@ def get_collateral(exchange):
         return jsonify(collateral), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
+    
 
 ######################
 # Internal Functions #
@@ -127,3 +131,11 @@ def get_demo_opportunities():
     except Exception as e:
         return {"error": str(e)}
 
+def graceful_shutdown(signum, frame):
+    global bot_instance, is_running
+    if bot_instance and bot_instance.bot_running:
+        bot_instance.bot_running = False
+    is_running = False
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, graceful_shutdown)

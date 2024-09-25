@@ -16,7 +16,7 @@ def create_app(test_config=None):
     
     app.register_blueprint(settings.settings_blueprint)
 
-    if settings.is_env_valid() :
+    if settings.is_env_valid():
         print("Using full configurations")
         try:
             from FlaskServer.services import cli_commands
