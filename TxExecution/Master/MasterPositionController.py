@@ -80,6 +80,7 @@ class MasterPositionController:
     def close_position_pair(self, symbol: str, reason: str, strategy_execution_id: str):
         try:
             exchanges = self.trade_logger.get_trade_pair_by_execution_id(strategy_execution_id)
+            print(exchanges)
             for exchange_name in exchanges:
                     close_position_method = getattr(self, exchange_name.lower()).close_position
                     close_position_method(symbol=symbol, reason=reason)

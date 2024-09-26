@@ -80,17 +80,19 @@ def demo(): # TODO: Check
 @api_routes.route('/close-position-pair', methods=['POST'])
 def close_position(): # TODO: Check
     global is_running, bot_instance
-    if is_running:
-        data = request.json
-        symbol = data.get('symbol')
-        reason = data.get('reason')
-        exchanges = data.get('exchanges')
+    if not is_running:
+        data_str = request.data.decode('utf-8')
+        data = json.loads(data_str)
 
-        if not all([symbol, reason, exchanges]):
+        symbol = data['symbol']
+        reason = data['reason']
+        strategy_execution_id = data['strategy_execution_id']
+
+        if not all([symbol, reason, strategy_execution_id]):
             return jsonify({"status": "Missing required parameters"}), 400
         
         if not bot_instance.position_controller.is_executing_trade:
-            bot_instance.position_controller.close_position_pair(symbol, reason, exchanges)
+            bot_instance.position_controller.close_position_pair(symbol, reason, strategy_execution_id)
             return jsonify({"status": "Position pair closing initiated..."}), 200
         else:
             return jsonify({"status": "Cannot close position pair, bot is executing a trade try again in a bit."}), 400

@@ -18,8 +18,8 @@ def position_closed_to_socketio(position_report):
 def close_all_positions_to_socketio():
     sio.emit(EventsDirectory.CLOSE_ALL_POSITIONS.value)
 
-def close_position_pair_to_socketio(symbol, reason, exchanges):
-    sio.emit(EventsDirectory.CLOSE_POSITION_PAIR.value, {"symbol": symbol, "reason": reason, "exchanges": exchanges})
+def close_position_pair_to_socketio(symbol, reason, strategy_execution_id):
+    sio.emit(EventsDirectory.CLOSE_POSITION_PAIR.value, {"symbol": symbol, "reason": reason, "strategy_execution_id": strategy_execution_id})
 
 def opportunity_found_to_socketio(opportunity):
     sio.emit(EventsDirectory.OPPORTUNITY_FOUND.value, opportunity)
