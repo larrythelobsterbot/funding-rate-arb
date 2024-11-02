@@ -11,12 +11,12 @@ load_dotenv(verbose=True, override=True)
 # Function will be for setting up configurations for the Flask app
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
-    CORS(app, resources={r"/*": {"origins": "https://main.dmep2akgaq1vh.amplifyapp.com"}}) # https://main.dmep2akgaq1vh.amplifyapp.com
-    socketio = SocketIO(app, cors_allowed_origins="https://main.dmep2akgaq1vh.amplifyapp.com")
+    CORS(app, resources={r"/*": {"origins": "https://fundingratesniper.com"}}) # https://main.dmep2akgaq1vh.amplifyapp.com
+    socketio = SocketIO(app, cors_allowed_origins="https://fundingratesniper.com")
     
     app.register_blueprint(settings.settings_blueprint)
 
-    if settings.is_env_valid() :
+    if settings.is_env_valid():
         print("Using full configurations")
         try:
             from FlaskServer.services import cli_commands
