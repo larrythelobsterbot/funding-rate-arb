@@ -5,9 +5,7 @@ import requests
 from decimal import Decimal, InvalidOperation
 from enum import Enum
 from GlobalUtils.logger import *
-# from APICaller.Synthetix.SynthetixUtils import get_synthetix_client
 from APICaller.Binance.binanceUtils import get_binance_client
-# from APICaller.HMX.HMXCallerUtils import get_HMX_client
 import functools
 import re
 import time
@@ -20,14 +18,7 @@ NULL_ADDRESS = '0x0000000000000000000000000000000000000000'
 BLOCKS_PER_DAY_BASE = 43200
 BLOCKS_PER_HOUR_BASE = 1800
 
-# GLOBAL_SYNTHETIX_CLIENT = get_synthetix_client()
 GLOBAL_BINANCE_CLIENT = get_binance_client()
-# GLOBAL_HMX_CLIENT = get_HMX_client()
-
-# GLOBAL_OKX_PUBLIC_CLIENT = get_okx_pub_client()
-# GLOBAL_OKX_TRADING_DATA_CLIENT = get_okx_trading_data_client()
-# GLOBAL_OKX_ACCOUNT_CLIENT = get_okx_account_client()
-# GLOBAL_OKX_TRADE_CLIENT = get_okx_trade_client()
 
 class EventsDirectory(Enum):
     CLOSE_ALL_POSITIONS = "close_all_positions"
@@ -40,23 +31,15 @@ class EventsDirectory(Enum):
 DECIMALS = {
     "BTC": 8,
     "ETH": 18,
-    "SNX": 18,
     "SOL": 9,
-    "W": 18,
-    "WIF": 6,
     "ARB": 18,
     "BNB": 18,
-    "ENA": 18,
     "DOGE": 8,
     "AVAX": 18,
-    "PENDLE": 18,
     "NEAR": 24,
     "AAVE": 18,
-    "ATOM": 6,
-    "XRP": 6,
     "LINK": 18,
     "UNI": 18,
-    "LTC": 8,
     "OP": 18,
     "GMX": 18,
     "PEPE": 18,
@@ -85,56 +68,8 @@ def get_gas_price() -> float:
             return None
     return 0.0
 
-# def get_price_from_pyth(symbol: str):
-#     try:
-#         response = GLOBAL_SYNTHETIX_CLIENT.pyth.get_price_from_symbols([symbol])
-        
-#         feed_id = next(iter(response['meta']))
-#         meta_data = response['meta'].get(feed_id, {})
-#         price: float = meta_data.get('price')
-
-#         if price is not None:
-#             return price
-
-#     except KeyError as ke:
-#         logger.error(f"GlobalUtils - KeyError accessing Pyth response data for {symbol}: {ke}")
-#         return None
-#     except Exception as e:
-#         logger.error(f"GlobalUtils - Unexpected error fetching asset price for {symbol} from Pyth: {e}")
-#         return None
-
-
-# def calculate_transaction_cost_usd(total_gas: int) -> float:
-#     try:
-#         gas_price_gwei = get_gas_price()
-#         eth_price_usd = get_price_from_pyth('ETH')
-#         gas_cost_eth = (gas_price_gwei * total_gas) / Decimal('1e9')
-#         transaction_cost_usd = float(gas_cost_eth) * eth_price_usd
-#         return transaction_cost_usd
-#     except (InvalidOperation, ValueError) as e:
-#         logger.error(f"GlobalUtils - Error calculating transaction cost: {e}")
-#     return 0.0
-
-# def get_asset_amount_for_given_dollar_amount(asset: str, dollar_amount: float) -> float:
-#     try:
-#         asset_price = get_price_from_pyth(asset)
-#         asset_amount = dollar_amount / asset_price
-#         return asset_amount
-#     except ZeroDivisionError:
-#         logger.error(f"GlobalUtils - Error calculating asset amount for {asset}: Price is zero")
-#     return 0.0
-
-# def get_dollar_amount_for_given_asset_amount(asset: str, asset_amount: float) -> float:
-#     try:
-#         asset_price = get_price_from_pyth(asset)
-#         dollar_amount = asset_amount * asset_price
-#         return dollar_amount
-#     except Exception as e:
-#         logger.error(f"GlobalUtils - Error converting asset amount to dollar amount for {asset}: {e}")
-#     return 0.0
-
 def normalize_symbol(symbol: str) -> str:
-    return symbol.replace('USDT', '').replace('PERP', '').replace('USD', '')
+    return symbol.replace('USDT', '').replace('PERP', '').replace('USD', '').replace('-SWAP', '')
 
 def adjust_trade_size_for_direction(trade_size: float, is_long: bool) -> float:
     try:
@@ -200,7 +135,6 @@ def normalize_funding_rate_to_8hrs(rate: float, hours: int) -> float:
         return None
 
 def is_transaction_hash(tx_hash) -> bool:
-    # Regular expression to match an Ethereum transaction hash
     pattern = r'^0x[a-fA-F0-9]{64}$'
     return re.match(pattern, tx_hash) is not None
 
@@ -254,7 +188,7 @@ def get_arbitrum_usdc_balance_global():
         return human_readable_balance
     
     except Exception as e:
-        logger.error(f'GlobalUtils - Failed to fetch USDC balance for address {wallet_address}. Error: {e}')
+        logger.error(f'GlobalUtils - Failed to fetch USDC balance for address. Error: {e}')
         return None
 
 def get_price_coingecko(symbol):

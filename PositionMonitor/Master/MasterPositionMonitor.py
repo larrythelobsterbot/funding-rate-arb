@@ -1,12 +1,9 @@
-# from PositionMonitor.Synthetix.SynthetixPositionMonitor import SynthetixPositionMonitor
 from PositionMonitor.Binance.BinancePositionMonitor import BinancePositionMonitor
-# from PositionMonitor.HMX.HMXPositionMonitor import HMXPositionMonitor
 from PositionMonitor.GMX.GMXPositionMonitor import GMXPositionMonitor
 from PositionMonitor.ByBit.ByBitPositionMonitor import ByBitPositionMonitor
 from PositionMonitor.Master.MasterPositionMonitorUtils import *
 from GlobalUtils.logger import *
 from GlobalUtils.globalUtils import *
-from GlobalUtils.MarketDirectories.SynthetixMarketDirectory import SynthetixMarketDirectory
 from pubsub import pub
 import threading
 import sqlite3
@@ -14,9 +11,7 @@ import time
 
 class MasterPositionMonitor():
     def __init__(self):
-        # self.synthetix = SynthetixPositionMonitor()
         self.binance = BinancePositionMonitor()
-        # self.hmx = HMXPositionMonitor()
         self.gmx = GMXPositionMonitor()
         self.bybit = ByBitPositionMonitor()
         self.health_check_thread = None
@@ -47,10 +42,6 @@ class MasterPositionMonitor():
         is_profitable = self.check_profitability_for_open_positions(exchanges)
         is_delta_within_bounds = self.is_position_delta_within_bounds(exchanges)
 
-        is_funding_velocity_turning = False
-        if 'Synthetix' in exchanges:
-            is_funding_velocity_turning = self.is_synthetix_funding_turning_against_trade_in_given_time(15)
-
         if is_liquidation_risk:
             reason = PositionCloseReason.LIQUIDATION_RISK.value
             pub.sendMessage(EventsDirectory.CLOSE_POSITION_PAIR.value, symbol=symbol, reason=reason, exchanges=exchanges)
@@ -59,9 +50,6 @@ class MasterPositionMonitor():
             pub.sendMessage(EventsDirectory.CLOSE_POSITION_PAIR.value, symbol=symbol, reason=reason, exchanges=exchanges)
         elif not is_delta_within_bounds:
             reason = PositionCloseReason.DELTA_ABOVE_BOUND.value
-            pub.sendMessage(EventsDirectory.CLOSE_POSITION_PAIR.value, symbol=symbol, reason=reason, exchanges=exchanges)
-        elif is_funding_velocity_turning:
-            reason = PositionCloseReason.FUNDING_TURNING_AGAINST_TRADE.value
             pub.sendMessage(EventsDirectory.CLOSE_POSITION_PAIR.value, symbol=symbol, reason=reason, exchanges=exchanges)
         else:
             logger.info('MasterPositionMonitor - no threat detected for open position')
@@ -143,44 +131,10 @@ class MasterPositionMonitor():
             absolute_delta = abs(positions[exchanges[0]] - positions[exchanges[1]])
             relative_delta = (absolute_delta / total_absolute_notional_value) if total_absolute_notional_value else 0
 
-
             return relative_delta - 1 <= delta_bound
         except Exception as e:
             logger.error(f"MasterPositionMonitor - Unexpected error in checking position delta: {e}")
             return False
-
-    def is_synthetix_funding_turning_against_trade_in_given_time(self, mins: int) -> bool:
-        symbol = '' 
-        try:
-            synthetix_position = self.synthetix.get_open_position()
-            if not synthetix_position:
-                logger.error("MasterPositionMonitor - No open position found.")
-                return None
-            
-            symbol = str(synthetix_position['symbol'])
-
-            market_data = SynthetixMarketDirectory.get_market_params(symbol)
-            if not market_data:
-                logger.error(f"MasterPositionMonitor - No market data available for symbol: {symbol}")
-                return None
-
-            market_summary = self.synthetix.client.perps.get_market_summary(market_data['market_id'])
-            funding_rate = float(market_summary['current_funding_rate'])
-            velocity = float(market_summary['current_funding_velocity'])
-            is_long = synthetix_position['size_in_asset'] > 0
-            is_hedge = True if synthetix_position['is_hedge'] == 'True' else False
-
-            future_blocks = mins * 30
-            predicted_funding_rate = funding_rate + (velocity * future_blocks / BLOCKS_PER_DAY_BASE)
-
-            if (is_long and not is_hedge and predicted_funding_rate < 0) or (not is_long and is_hedge and predicted_funding_rate > 0):
-                return True
-            return False
-
-        except Exception as e:
-            logger.error(f"MasterPositionMonitor - Error checking if funding is turning against trade for {symbol}: {e}")
-            return False
-
 
     def get_exchanges_for_open_position(self) -> list:
         try:

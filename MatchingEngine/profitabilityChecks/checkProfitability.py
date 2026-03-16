@@ -2,18 +2,12 @@ from GlobalUtils.globalUtils import *
 from GlobalUtils.logger import *
 from TxExecution.Master.MasterPositionController import MasterPositionController
 from MatchingEngine.profitabilityChecks.checkProfitabilityUtils import *
-from GlobalUtils.MarketDirectories.SynthetixMarketDirectory import SynthetixMarketDirectory
 from GlobalUtils.MarketDirectories.GMXMarketDirectory import GMXMarketDirectory
 from MatchingEngine.profitabilityChecks.GMX.GMXCheckProfitabilityUtils import *
-# from APICaller.HMX.HMXCallerUtils import *
-# from MatchingEngine.profitabilityChecks.HMX.HMXCheckProfitabilityUtils import *
-# from MatchingEngine.profitabilityChecks.Synthetix.SynthetixCheckProfitabilityUtils import *
-from MatchingEngine.profitabilityChecks.Perennial.PerennialProfitabilityChecks import *
 from APICaller.ByBit.ByBitCaller import ByBitCaller
 from gmx_python_sdk.scripts.v2.get.get_oracle_prices import OraclePrices
 from APICaller.GMX.GMXCallerUtils import ARBITRUM_CONFIG_OBJECT
 from APICaller.master.MasterUtils import get_target_exchanges
-from MatchingEngine.profitabilityChecks.Perennial.PerennialProfitabilityChecks import *
 import json
 import os
 
@@ -21,7 +15,6 @@ class ProfitabilityChecker:
     def __init__(self):
         self.position_controller = MasterPositionController()
         self.bybit_caller = ByBitCaller()
-        # self.okx_caller = OKXCaller()
         self.gmx_prices = {}
         self.gmx_open_interest = {}
 
@@ -96,23 +89,14 @@ class ProfitabilityChecker:
             if exchange == 'Binance':
                 estimated_profit = self.estimate_binance_profit(time_period_hours=time_period_hours, size_usd=size_usd, opportunity=opportunity)
                 return estimated_profit
-            # elif exchange == 'Synthetix':
-            #     estimated_profit = self.estimate_synthetix_profit(time_period_hours=time_period_hours, absolute_size_usd=size_usd, opportunity=opportunity)
-            #     return estimated_profit
             elif exchange == 'GMX':
                 estimated_profit = self.estimate_GMX_profit(time_period_hours=time_period_hours, absolute_size_usd=size_usd, opportunity=opportunity, open_interest=self.gmx_open_interest)
                 return estimated_profit
-            # elif exchange == 'HMX':
-            #     estimated_profit = estimate_HMX_profit(time_period_hours=time_period_hours, size_usd=size_usd, opportunity=opportunity)
-            #     return estimated_profit
             elif exchange == 'ByBit':
                 estimated_profit = self.estimate_bybit_profit(time_period_hours=time_period_hours, size_usd=size_usd, opportunity=opportunity)
                 return estimated_profit
             elif exchange == 'OKX':
                 estimated_profit = self.estimate_okx_profit(time_period_hours=time_period_hours, size_usd=size_usd, opportunity=opportunity)
-                return estimated_profit
-            elif exchange == 'Perennial':
-                estimated_profit = self.estimate_perennial_profit(time_period_hours=time_period_hours, absolute_size_usd=size_usd, opportunity=opportunity)
                 return estimated_profit
 
             if not estimated_profit:
@@ -124,39 +108,11 @@ class ProfitabilityChecker:
 
     def estimate_time_to_neutralize_funding_rate_for_exchange(self, opportunity: dict, size_usd: float, exchange: str):
         try:
-            # if exchange == "HMX":
-            #     time_to_neutralize = estimate_time_to_neutralize_funding_rate_hmx(opportunity, size_usd)
-            #     if type(time_to_neutralize) == str:
-            #         time_to_neutralize = self.default_trade_duration
-            #         return time_to_neutralize
-            #     else:
-            #         return time_to_neutralize
-
-            # if exchange == "Synthetix":
-            #     time_to_neutralize = estimate_time_to_neutralize_funding_rate_synthetix(opportunity, absolute_size_usd=size_usd)
-            #     if type(time_to_neutralize) == str:
-            #         time_to_neutralize = self.default_trade_duration
-            #         return time_to_neutralize
-            #     else:
-            #         return time_to_neutralize
-            
             if exchange == "GMX":
                 time_to_neutralize = estimate_time_to_neutralize_funding_rate_gmx(
                     opportunity, 
                     absolute_size_usd=size_usd, 
                     open_interest=self.gmx_open_interest
-                    )
-
-                if type(time_to_neutralize) == str:
-                    time_to_neutralize = self.default_trade_duration
-                    return time_to_neutralize
-                else:
-                    return time_to_neutralize
-            
-            if exchange == "Perennial":
-                time_to_neutralize = estimate_time_to_neutralize_rate_perennial(
-                    opportunity, 
-                    absolute_size_usd=size_usd, 
                     )
 
                 if type(time_to_neutralize) == str:
@@ -174,42 +130,13 @@ class ProfitabilityChecker:
             elif exchange == "OKX":
                 return "No Neutralization"
 
+            else:
+                # Fallback for new exchanges — treat as no neutralization
+                return "No Neutralization"
+
         except Exception as e:
             logger.error(f'CheckProfitability - Failed to estimate profit for exchange {exchange}, Error: {e}', exc_info=True)
             return None
-
-    # def estimate_synthetix_profit(self, time_period_hours: float, absolute_size_usd: float, opportunity: dict) -> tuple:
-    #     is_long: bool = opportunity['long_exchange'] == 'Synthetix'
-    #     symbol = str(opportunity['symbol'])
-    #     skew_usd: float = opportunity['long_exchange_skew_usd'] if is_long else opportunity['short_exchange_skew_usd']
-
-    #     try:
-    #         is_long = opportunity['long_exchange'] == 'Synthetix'
-
-    #         size_usd = get_adjusted_size(absolute_size_usd, is_long)
-    #         skew_usd_after_trade = skew_usd + size_usd
-    #         opening_fee = SynthetixMarketDirectory.get_total_opening_fee(symbol, skew_usd, is_long, absolute_size_usd)
-    #         closing_fee = SynthetixMarketDirectory.get_total_closing_fee(symbol, skew_usd_after_trade, is_long, absolute_size_usd)
-
-    #         gas_fee_usd = 1
-    #         premium = self.position_controller.synthetix.calculate_premium_usd(symbol, size_usd)
-
-    #         total_funding = calculate_expected_funding_for_time_period_usd(
-    #             opportunity,
-    #             is_long,
-    #             absolute_size_usd,
-    #             time_period_hours
-    #         )
-
-            
-    #         total_fees = (opening_fee + premium + gas_fee_usd + closing_fee)
-    #         profit_after_fees = total_funding - total_fees
-
-    #         return profit_after_fees
-
-    #     except Exception as e:
-    #         logger.error(f'CheckProfitability -  Error estimating Synthetix profit for {symbol}: Error: {e}')
-    #         return None
 
     def estimate_binance_profit(self, time_period_hours: float, size_usd: float, opportunity: dict):
         try:
@@ -246,18 +173,14 @@ class ProfitabilityChecker:
 
             if is_long:
                 if funding_rate > 0:
-                    # rate positive, long
                     profit_loss_usd_per_event = size_usd * funding_rate
                     profit_loss_usd_per_event = -profit_loss_usd_per_event
                 else:
-                    # rate negative, long
                     profit_loss_usd_per_event = size_usd * abs(funding_rate)
             else:
                 if funding_rate > 0:
-                    # rate positive, short
                     profit_loss_usd_per_event = size_usd * funding_rate
                 else:
-                    # rate negative, short
                     profit_loss_usd_per_event = size_usd * abs(funding_rate)
                     profit_loss_usd_per_event = -profit_loss_usd_per_event
 
@@ -278,18 +201,14 @@ class ProfitabilityChecker:
 
             if is_long:
                 if funding_rate > 0:
-                    # rate positive, long
                     profit_loss_usd_per_event = size_usd * funding_rate
                     profit_loss_usd_per_event = -profit_loss_usd_per_event
                 else:
-                    # rate negative, long
                     profit_loss_usd_per_event = size_usd * abs(funding_rate)
             else:
                 if funding_rate > 0:
-                    # rate positive, short
                     profit_loss_usd_per_event = size_usd * funding_rate
                 else:
-                    # rate negative, short
                     profit_loss_usd_per_event = size_usd * abs(funding_rate)
                     profit_loss_usd_per_event = -profit_loss_usd_per_event
 
@@ -342,32 +261,6 @@ class ProfitabilityChecker:
         except Exception as e:
             logger.error(f'CheckProfitability -  Error estimating GMX profit for {symbol}: Error: {e}', exc_info=True)
             return None
-
-    def estimate_perennial_profit(self, time_period_hours: dict, absolute_size_usd: float, opportunity: dict) -> float:
-        try:
-            symbol = opportunity['symbol']
-            is_long: bool = opportunity['long_exchange'] == 'Perennial'
-            initial_funding_rate_8h = opportunity['long_exchange_funding_rate_8hr'] if is_long else opportunity['short_exchange_funding_rate_8hr']
-            new_funding_velocity = calculate_new_funding_velocity_perennial(
-                symbol,
-                absolute_size_usd,
-                is_long
-            )
-
-            profit = calculate_profit_perennial(
-                absolute_size_usd,
-                time_period_hours,
-                new_funding_velocity,
-                initial_funding_rate_8h
-            )
-
-            return profit
-            
-
-        except Exception as e:
-            logger.error(f'CheckProfitability -  Error estimating Perennial profit for {symbol}: Error: {e}', exc_info=True)
-            return None
-
 
     def estimate_profit_for_time_period(self, hours_to_neutralize_by_exchange: dict, size_usd_per_side: float, opportunity: dict) -> dict:
         try:

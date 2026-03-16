@@ -2,7 +2,6 @@ from APICaller.Binance.binanceCaller import BinanceCaller
 from Backtesting.utils.backtestingUtils import *
 from Backtesting.Binance.binanceBacktesterUtils import *
 from GlobalUtils.globalUtils import *
-from GlobalUtils.MarketDirectories.SynthetixMarketDirectory import SynthetixMarketDirectory
 from GlobalUtils.logger import logger
 import math
 import time 
@@ -179,7 +178,7 @@ class BinanceBacktester:
 
     def build_backtest_data(self, symbol: str) -> dict:
         try:
-            market_id = SynthetixMarketDirectory.get_market_id(symbol)
+            market_id = None  # TODO: was SynthetixMarketDirectory — rebuild for new exchanges
             formatted_symbol = symbol + 'USDT'
             max_limit = 100
             rates = self.caller.get_historical_funding_rate_for_symbol(formatted_symbol, max_limit)

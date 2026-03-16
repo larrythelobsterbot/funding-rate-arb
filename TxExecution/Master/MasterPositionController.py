@@ -1,10 +1,7 @@
 from TxExecution.Binance.BinancePositionController import BinancePositionController
-# from TxExecution.Synthetix.SynthetixPositionController import SynthetixPositionController
-# from TxExecution.HMX.HMXPositionController import HMXPositionController
 from TxExecution.ByBit.ByBitPositionController import ByBitPositionController
 from TxExecution.OKX.OKXPositionController import OKXPositionController
 from TxExecution.GMX.GMXPositionController import GMXPositionController
-from TxExecution.Perennial.PerennialPositionController import PerennialPositionController
 
 from TxExecution.Master.MasterPositionControllerUtils import *
 
@@ -16,13 +13,10 @@ from GlobalUtils.globalUtils import *
 
 class MasterPositionController:
     def __init__(self):
-        # self.synthetix = SynthetixPositionController()
         self.binance = BinancePositionController()
-        # self.hmx = HMXPositionController()
         self.bybit = ByBitPositionController()
-        # self.okx = OKXPositionController()
+        self.okx = OKXPositionController()
         self.gmx = GMXPositionController()
-        self.perennial = PerennialPositionController()
 
     #######################
     ### WRITE FUNCTIONS ###
@@ -165,76 +159,38 @@ class MasterPositionController:
 
     def is_already_position_open(self) -> bool:
         try:
-            is_synthetix_position = False
-            is_hmx_position = False
             is_binance_position = False
             is_bybit_position = False
-            is_perennial_position = False
+            is_gmx_position = False
 
             target_exchange_list = get_target_exchanges()
-            is_synthetix_target = 'Synthetix' in target_exchange_list
-            is_hmx_target = 'HMX' in target_exchange_list
-            is_binance_target = 'Binance' in target_exchange_list
-            is_bybit_target = 'ByBit' in target_exchange_list
-            is_okx_target = 'OKX' in target_exchange_list
-            is_gmx_target = 'GMX' in target_exchange_list
-            is_perennial_target = 'Perennial' in target_exchange_list
-
-            # try:
-            #     if is_synthetix_target:
-            #         is_synthetix_position = self.synthetix.is_already_position_open()
-            # except Exception as e:
-            #     logger.error(f'MasterPositionController:is_already_position_open - Error checking Synthetix position: {e}')
-
-            # try:
-            #     if is_hmx_target:
-            #         is_hmx_position = self.hmx.is_already_position_open()
-            # except Exception as e:
-            #     logger.error(f'MasterPositionController:is_already_position_open - Error checking HMX position: {e}')
 
             try:
-                if is_binance_target:
+                if 'Binance' in target_exchange_list:
                     is_binance_position = self.binance.is_already_position_open()
             except Exception as e:
                 logger.error(f'MasterPositionController:is_already_position_open - Error checking Binance position: {e}')
 
             try:
-                if is_bybit_target:
+                if 'ByBit' in target_exchange_list:
                     is_bybit_position = self.bybit.is_already_position_open()
             except Exception as e:
                 logger.error(f'MasterPositionController:is_already_position_open - Error checking ByBit position: {e}')
 
-            try:
-                if is_okx_target:
-                    # is_okx_position = self.okx.is_already_position_open()
-                    pass
-            except Exception as e:
-                logger.error(f'MasterPositionController:is_already_position_open - Error checking OKX position: {e}')
-
             try:    
-                if is_gmx_target:
+                if 'GMX' in target_exchange_list:
                     is_gmx_position = self.gmx.is_already_position_open()
             except Exception as e:
                 logger.error(f'MasterPositionController:is_already_position_open - Error checking GMX position: {e}')
-            
-            try:
-                if is_perennial_target:
-                    is_perennial_position = self.perennial.is_already_position_open()
-            except Exception as e:
-                logger.error(f'MasterPositionController:is_already_position_open - Error checking Perennial position: {e}')
 
             positions_open = [
-                is_synthetix_position,
-                is_hmx_position,
                 is_binance_position,
                 is_bybit_position,
-                # is_okx_position
-                # is_gmx_position,
-                is_perennial_position
+                is_gmx_position,
             ]
 
             if any(positions_open):
-                logger.info(f"MasterPositionController - Position already open: SNX: {is_synthetix_position}, HMX: {is_hmx_position}, Binance: {is_binance_position}, ByBit: {is_bybit_position}, GMX: {is_gmx_position}, Perennial: {is_perennial_position}")
+                logger.info(f"MasterPositionController - Position already open: Binance: {is_binance_position}, ByBit: {is_bybit_position}, GMX: {is_gmx_position}")
                 return True
             else:
                 logger.info(f"MasterPositionController - No positions open.")

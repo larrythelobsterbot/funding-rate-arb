@@ -5,10 +5,8 @@ from MatchingEngine.MatchingEngine import matchingEngine
 from MatchingEngine.profitabilityChecks.checkProfitability import ProfitabilityChecker
 from TxExecution.Master.MasterPositionController import MasterPositionController
 from PositionMonitor.Master.MasterPositionMonitor import MasterPositionMonitor
-from PositionMonitor.Master.MasterPositionMonitorUtils import *
 from PositionMonitor.TradeDatabase.TradeDatabase import TradeLogger
 from GlobalUtils.globalUtils import *
-from GlobalUtils.MarketDirectories.SynthetixMarketDirectory import SynthetixMarketDirectory
 from GlobalUtils.MarketDirectories.GMXMarketDirectory import GMXMarketDirectory
 import time
 
@@ -22,8 +20,7 @@ class Main:
         self.position_controller.subscribe_to_events()
         self.position_monitor = MasterPositionMonitor()
         self.trade_logger = TradeLogger()
-        # SynthetixMarketDirectory.initialize()
-        # GMXMarketDirectory.initialize()
+        GMXMarketDirectory.initialize()
     
     def search_for_opportunities(self):
         try:
@@ -47,4 +44,3 @@ class Main:
         
         except Exception as e:
             logger.error(f"MainClass - An error occurred during start_search: {e}", exc_info=True)
-

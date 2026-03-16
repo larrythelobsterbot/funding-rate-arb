@@ -1,56 +1,73 @@
-# from APICaller.Synthetix.SynthetixCaller import SynthetixCaller
 from APICaller.Binance.binanceCaller import BinanceCaller
 from APICaller.ByBit.ByBitCaller import ByBitCaller
-# from APICaller.HMX.HMXCaller import HMXCaller
-# from APICaller.OKX.okxCaller import OKXCaller
 from APICaller.GMX.GMXCaller import GMXCaller
-from APICaller.Perennial.perennialCaller import PerennialCaller
 from APICaller.master.MasterUtils import get_all_target_token_lists, get_target_exchanges
 from GlobalUtils.logger import *
 import json
 
+
+# ─── Lazy exchange loader ──────────────────────────────────────────
+# Only import and instantiate exchanges that are set as targets.
+# This avoids import-time crashes for exchanges whose env vars
+# aren't configured (e.g. OKX API keys missing).
+
+def _make_exchange(name: str):
+    """Factory: import and instantiate a caller by exchange name."""
+    if name == "Binance":
+        return BinanceCaller()
+    elif name == "ByBit":
+        return ByBitCaller()
+    elif name == "GMX":
+        return GMXCaller()
+    elif name == "OKX":
+        from APICaller.Okx.okxCaller import OKXCaller
+        return OKXCaller()
+    elif name == "Variational":
+        from APICaller.Variational.VariationalCaller import VariationalCaller
+        return VariationalCaller()
+    elif name == "Hyperliquid":
+        from APICaller.Hyperliquid.HyperliquidCaller import HyperliquidCaller
+        return HyperliquidCaller()
+    elif name == "EdgeX":
+        from APICaller.EdgeX.EdgeXCaller import EdgeXCaller
+        return EdgeXCaller()
+    elif name == "Lighter":
+        from APICaller.Lighter.LighterCaller import LighterCaller
+        return LighterCaller()
+    elif name == "GateIO":
+        from APICaller.GateIO.GateIOCaller import GateIOCaller
+        return GateIOCaller()
+    elif name == "Bitget":
+        from APICaller.Bitget.BitgetCaller import BitgetCaller
+        return BitgetCaller()
+    else:
+        logger.warning(f"MasterAPICaller - No caller implemented for exchange: {name}")
+        return None
+
+
 class MasterCaller:
     def __init__(self):
-        # self.synthetix = SynthetixCaller()
-        self.binance = BinanceCaller()
-        self.bybit = ByBitCaller()
-        # self.hmx = HMXCaller()
-        self.gmx = GMXCaller()
-        # self.okx = OKXCaller()
-        self.perennial = PerennialCaller()
-        self.target_token_list_by_exchange = get_all_target_token_lists()
         self.target_exchanges = get_target_exchanges()
-        self.filtered_exchange_objects_and_tokens = self.filter_exchanges_and_tokens()
+        self.token_lists = get_all_target_token_lists()
 
-    def filter_exchanges_and_tokens(self):
-        try:
-            all_exchanges = {
-                # "Synthetix": (self.synthetix, self.target_token_list_by_exchange[0]),
-                "Binance": (self.binance, self.target_token_list_by_exchange[1]),
-                "ByBit": (self.bybit, self.target_token_list_by_exchange[2]),
-                # "HMX": (self.hmx, self.target_token_list_by_exchange[3]),
-                "GMX": (self.gmx, self.target_token_list_by_exchange[4]),
-                # "OKX": (self.okx, self.target_token_list_by_exchange[5])
-                "Perennial": (self.perennial, self.target_token_list_by_exchange[6])
-            }
+        # Only instantiate callers for targeted exchanges
+        self.exchange_objects = {}
+        for name in self.target_exchanges:
+            try:
+                caller = _make_exchange(name)
+                if caller:
+                    self.exchange_objects[name] = caller
+            except Exception as e:
+                logger.error(f"MasterAPICaller - Failed to instantiate {name}: {e}")
 
-            filtered_exchanges = {}
-            for exchange_name in self.target_exchanges:
-                if exchange_name in all_exchanges:
-                    filtered_exchanges[exchange_name] = all_exchanges[exchange_name]
-
-            return filtered_exchanges
-        except Exception as e:
-            logger.error(f"MasterAPICaller - Error filtering exchanges and tokens: {e}")
-            return {}
-  
     def get_funding_rates(self) -> list:
         funding_rates = []
-        if not self.filtered_exchange_objects_and_tokens:
-            logger.error("MasterAPICaller - No exchanges and tokens available for fetching funding rates.")
+        if not self.exchange_objects:
+            logger.error("MasterAPICaller - No exchanges available for fetching funding rates.")
             return funding_rates
 
-        for exchange_name, (exchange, tokens) in self.filtered_exchange_objects_and_tokens.items():
+        for exchange_name, exchange in self.exchange_objects.items():
+            tokens = self.token_lists.get(exchange_name, [])
             if not tokens:
                 logger.warning(f"MasterAPICaller - No tokens available for {exchange_name}. Skipping.")
                 continue
@@ -69,9 +86,3 @@ class MasterCaller:
             return None
 
         return funding_rates
-
-# x = MasterCaller()
-# y = x.get_funding_rates()
-# logger.info(y)
-# with open('MasterTest.json', 'w') as f:
-#     json.dump(y, f, indent=4)
